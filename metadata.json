@@ -1,5 +1,5 @@
 {
-  "name": "ZenMark AI - Intelligent Bookmark Manager",
+  "name": "bukmarks AI - Intelligent Bookmark Manager",
   "description": "An AI-powered bookmark organizer that automatically categorizes your links, identifies stale content for cleanup, and provides insightful summaries using Gemini.",
   "requestFramePermissions": []
 }

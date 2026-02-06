@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import BookmarkCard from './components/BookmarkCard';
@@ -11,24 +11,45 @@ const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>(ViewMode.DASHBOARD);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(INITIAL_BOOKMARKS);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Calculate dynamic categories and their counts
+  const categoriesList = useMemo(() => {
+    const counts: Record<string, number> = {};
+    bookmarks.forEach(b => {
+      counts[b.category] = (counts[b.category] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [bookmarks]);
 
   const filteredBookmarks = useMemo(() => {
     let result = bookmarks;
     
-    if (searchQuery) {
-      result = result.filter(b => 
-        b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+    // Apply View Mode filters
+    if (view === ViewMode.STALE) {
+      result = result.filter(b => b.isStale);
     }
 
-    if (view === ViewMode.STALE) {
-      return result.filter(b => b.isStale);
+    // Apply Category filter
+    if (selectedCategory) {
+      result = result.filter(b => b.category === selectedCategory);
+    }
+    
+    // Apply Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(b => 
+        b.title.toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q) ||
+        b.tags.some(t => t.toLowerCase().includes(q)) ||
+        (b.summary && b.summary.toLowerCase().includes(q))
+      );
     }
     
     return result;
-  }, [bookmarks, searchQuery, view]);
+  }, [bookmarks, searchQuery, view, selectedCategory]);
 
   const staleCount = useMemo(() => bookmarks.filter(b => b.isStale).length, [bookmarks]);
 
@@ -42,7 +63,6 @@ const App: React.FC = () => {
 
   const handleUpdate = (id: string, updates: Partial<Bookmark>) => {
     if (id === 'DUMMY') {
-      // Logic for adding a new bookmark
       setBookmarks(prev => [updates as Bookmark, ...prev]);
       return;
     }
@@ -62,12 +82,23 @@ const App: React.FC = () => {
     });
   };
 
+  const handleAddBatch = (newBatch: Bookmark[]) => {
+    setBookmarks(prev => {
+      const existingUrls = new Set(prev.map(b => b.url));
+      const filteredBatch = newBatch.filter(b => !existingUrls.has(b.url));
+      return [...filteredBatch, ...prev];
+    });
+  };
+
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 overflow-hidden">
       <Sidebar 
         currentView={view} 
         onViewChange={setView} 
         staleCount={staleCount} 
+        categories={categoriesList}
+        selectedCategory={selectedCategory}
+        onCategorySelect={setSelectedCategory}
       />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -82,7 +113,7 @@ const App: React.FC = () => {
               placeholder="Search links, tags, or categories..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="w-full pl-12 pr-4 py-3 bg-slate-100 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 transition-all text-sm"
             />
           </div>
           
@@ -102,7 +133,8 @@ const App: React.FC = () => {
           {view === ViewMode.DASHBOARD && (
             <Dashboard 
               bookmarks={bookmarks} 
-              onCleanupClick={() => setView(ViewMode.STALE)} 
+              onCleanupClick={() => setView(ViewMode.STALE)}
+              onSyncClick={() => setView(ViewMode.AI_ORGANIZER)}
             />
           )}
 
@@ -112,6 +144,7 @@ const App: React.FC = () => {
               onUpdateBookmark={handleUpdate} 
               onBulkDelete={handleBulkDelete}
               onBulkUpdate={handleBulkUpdate}
+              onAddBatch={handleAddBatch}
             />
           )}
 
@@ -119,13 +152,24 @@ const App: React.FC = () => {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center justify-between mb-8">
                 <div>
-                  <h2 className="text-3xl font-bold text-slate-800">
-                    {view === ViewMode.STALE ? 'Needs Cleanup' : 'All Bookmarks'}
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-3xl font-bold text-slate-800">
+                      {view === ViewMode.STALE ? 'Needs Cleanup' : (selectedCategory || 'All Bookmarks')}
+                    </h2>
+                    {selectedCategory && (
+                      <button 
+                        onClick={() => setSelectedCategory(null)}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold hover:bg-indigo-200 transition-colors"
+                      >
+                        Category Active
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    )}
+                  </div>
                   <p className="text-slate-500 mt-1">
                     {view === ViewMode.STALE 
                       ? `Found ${staleCount} links that are likely outdated or forgotten.` 
-                      : `Total of ${bookmarks.length} saved resources across all categories.`
+                      : `Viewing ${filteredBookmarks.length} resources.`
                     }
                   </p>
                 </div>
@@ -155,7 +199,15 @@ const App: React.FC = () => {
                 <div className="py-20 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-300">
                   <div className="text-6xl mb-6">🏜️</div>
                   <h3 className="text-xl font-bold text-slate-800">No bookmarks found</h3>
-                  <p className="text-slate-500 mt-2">Try adjusting your search or add some new links!</p>
+                  <p className="text-slate-500 mt-2">Try adjusting your filters or search query!</p>
+                  {(selectedCategory || searchQuery) && (
+                    <button 
+                      onClick={() => { setSelectedCategory(null); setSearchQuery(''); }}
+                      className="mt-6 px-6 py-2 border border-slate-200 rounded-xl font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
                 </div>
               )}
             </div>

@@ -1,0 +1,27 @@
+
+{
+  "manifest_version": 3,
+  "name": "bukmarks AI",
+  "version": "1.0.0",
+  "description": "AI-powered bookmark organizer and cleanup tool using Gemini.",
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "tabs"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Open bukmarks AI"
+  },
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}

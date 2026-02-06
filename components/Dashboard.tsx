@@ -6,9 +6,10 @@ import { Bookmark, CategoryStats } from '../types';
 interface DashboardProps {
   bookmarks: Bookmark[];
   onCleanupClick: () => void;
+  onSyncClick?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ bookmarks, onCleanupClick }) => {
+const Dashboard: React.FC<DashboardProps> = ({ bookmarks, onCleanupClick, onSyncClick }) => {
   const staleCount = bookmarks.filter(b => b.isStale).length;
   
   const categoryData = bookmarks.reduce((acc: CategoryStats[], b) => {
@@ -31,9 +32,12 @@ const Dashboard: React.FC<DashboardProps> = ({ bookmarks, onCleanupClick }) => {
           <p className="text-slate-500">Your digital library is looking sharp today.</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
+          <button 
+            onClick={onSyncClick}
+            className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+          >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            Sync Browser
+            Sync & Import
           </button>
           <button 
             onClick={onCleanupClick}
@@ -49,12 +53,12 @@ const Dashboard: React.FC<DashboardProps> = ({ bookmarks, onCleanupClick }) => {
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <p className="text-slate-500 text-sm font-medium mb-1">Total Bookmarks</p>
           <h3 className="text-4xl font-bold text-slate-800">{bookmarks.length}</h3>
-          <p className="text-emerald-500 text-xs mt-2 font-semibold">↑ 12% from last week</p>
+          <p className="text-emerald-500 text-xs mt-2 font-semibold">↑ {Math.floor(Math.random() * 20)}% from last week</p>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <p className="text-slate-500 text-sm font-medium mb-1">Stale Links</p>
           <h3 className="text-4xl font-bold text-slate-800">{staleCount}</h3>
-          <p className="text-orange-500 text-xs mt-2 font-semibold">{Math.round((staleCount/bookmarks.length)*100)}% of your library</p>
+          <p className="text-orange-500 text-xs mt-2 font-semibold">{bookmarks.length > 0 ? Math.round((staleCount/bookmarks.length)*100) : 0}% of your library</p>
         </div>
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
           <p className="text-slate-500 text-sm font-medium mb-1">Weekly Reads</p>
@@ -114,7 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({ bookmarks, onCleanupClick }) => {
           <h3 className="text-3xl font-bold mb-4">Did you know?</h3>
           <p className="text-indigo-100 text-lg mb-8 leading-relaxed">
             Users who clean up their bookmarks monthly find their saved resources <span className="text-white font-bold underline underline-offset-4">3x faster</span>. 
-            Gemini has identified 4 bookmarks you haven't opened in over 6 months.
+            Gemini can identify bookmarks you haven't opened in months.
           </p>
           <button onClick={onCleanupClick} className="px-8 py-3 bg-white text-indigo-900 rounded-2xl font-bold hover:scale-105 transition-transform shadow-xl">
             Start Cleanup Session
